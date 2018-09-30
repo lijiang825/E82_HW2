@@ -1,0 +1,56 @@
+#+TITLE: Notes
+
+* Topics over Time (TOT)
+
+- topic discovery influenced by temporal info as well as co-occurences of words
+- distribution for time: alternatives - Beta distribution
+
+** Useful TOT paper with NIPs results
+See [[https://people.cs.umass.edu/~mccallum/papers/tot-kdd06.pdf][LDA: Topics over time]]
+Their NIPS topics findings (first 17 years):
+  - activity in "analog circuit design" has fallen off
+  - research in "support vector machines" recently risen dramatically
+  - The topic "dynamic systems" used to co-occur with "neural networks", not now
+    co-occurs with "graphical models"
+
+** Algorithm
+- fit model params according to generative model in which a per-document
+  multinomial distribution over topics is sampled from a Dirichlet
+- for each word occurrence we sample a topic
+- a per-topic multinomial generates the word, and a per-topic Beta distribution
+  generates the document's timestamp
+- the timestamp is associated with each word in the document
+
+** Others possibly interesting papers
+- [[https://web.stanford.edu/~jurafsky/hallemnlp08.pdf][More topics over time]]
+
+*** Details of Gibbs sampling for latent models
+- [[https://cxwangyi.files.wordpress.com/2012/01/llt.pdf][Distributed Gibbs Sampling of Latent Topic Models]]
+
+*** Model: words and research citations
+- E. Erosheva, S. Fienberg, and J. Lafferty. Mixed
+  membership models of scientific publications. Proceedings
+  of the National Academy of Sciences, 101(Suppl. 1), 2004.
+
+*** Words with Markov dependencies
+- T. Griffiths, M. Steyvers, D. Blei, and J. Tenenbaum.
+  Integrating topics and syntax. In Advances in Neural Information Processing
+  Systems (NIPS) 17, 2004.
+- X. Wang and A. McCallum. A note on topical n-grams.
+  Technical report, UMass UM-CS-2005-071, 2005.
+
+*** Words and authors
+- M. Rosen-Zvi, T. Griffiths, M. Steyvers, and P. Smyth. The
+  author-topic model for authors and documents. In Proceedings of the 20th
+  Conference on Uncertainty in Artificial Intelligence, 2004.
+
+*** Mixed-Membership model
+Research papers and their citations
+
+- E. Erosheva, S. Fienberg, and J. Lafferty. Mixed
+  membership models of scientific publications. Proceedings of the National
+  Academy of Sciences, 101(Suppl. 1), 2004
+
+*** More LDA
+- D. Blei, A. Ng, and M. Jordan. Latent Dirichlet allocation.
+  Journal of Machine Learning Research, 3:993–1022, 2003.
