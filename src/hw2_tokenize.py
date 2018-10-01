@@ -1,75 +1,120 @@
 #!/usr/bin/env python
 
-# NP: The data I'm using appears to have a few more entries than the dataset you
-#     are using after tokenization
+"""
+Tokenization:
+  - lowercases
+  - removes punctuation
+  - cleans up unicode
+  - breaks strings into words of at least 3 letters using RegexpTokenizer
+  - lemmatizes words using WordNetLemmatizer if USE_LEMMA is True
+  - stopwords are computed on the fly using min_df and max_df params
 
-# This script just contains code for the tokenization
-# NP: The lemmatization is a WIP and I was unsure on stemming so I was trying to
-# make them both configurable -- see hw2_config.py
+Normalization:
+  - generates either TF or TF-IDF tokenizers
+  - TF are normalized using 'l2' norm
+  - TF-IDF are further normalized by frequency of word / doc to word globally
+
+See hw2_config for configuration.
+
+Note: to use the nltk lemmatizer, there are a couple downloads required. The
+wrapper function 'get_nltk_prereqs' will install them in the project root 
+directory.
+"""
 
 import pandas as pd
 import numpy as np
 
 ## Text pipeline & NLP packages
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+import nltk
+from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import RegexpTokenizer
+# from nltk.stem.porter import PorterStemmer
 
 from hw2_config import *        # project constants
 from hw2_utils import *         # helper functions
-from hw2_data import dat        # data to use
+
+nltk.data.path = root_path()
+
+def get_nltk_prereqs():
+    """Download NLTK prereqs in root directory."""
+    nltk.download(['wordnet', 'punkt'], download_dir=root_path())
 
 ## -------------------------------------------------------------------
-### Preliminary: tokenization, normalization
+### Word preprocessing:
+#   - split into lowercase words >3 chars, removing punctuation
+#   - lemmatization if configured will 
+#      - convert 3rd person -> 1st person
+#      - convert past tense and future tense verbs to present
+#   - stopwords are removed using scikit-learns defaults
 
-# Tokenization to TF/TF-IDF sparse matrices
-# These are default arguments for scikit-learn's TfidfVectorizer
-tokenizer_defaults = dict(
-    lowercase=True,          # convert everything to lowercase
-    decode_error='ignore',   # throw out unparseables
-    strip_accents='unicode', # preprocessing
-    stop_words='english',
-    max_df=0.95,             # auto build ignored terms
-    # min_df=0.02,           # this seems unnecessary? but may reduce memory
-    norm='l2',               # normalize term vectors
-    # I think we can just set this to False to have TF only tokens?
-    # use_idf=True,          # use inverse-document-freq. weighting
-    smooth_idf=True,         # adds 1 to avoid division by zero errors for tf-idf
-    # I modified this slightly since there were lots of numbers in the tokens
-    token_pattern=u'(?ui)\\b[a-z]+\\w*\\b' # ignore words starting with numbers
-)
+# Lemmatizer: can be used as a replacement tokenizer + lemmatizer in
+# scikit-learn tokenizers
+class LemmaTokenizer(object):
+    def __init__(self):
+        self.wnl = WordNetLemmatizer()
+        self.rt = RegexpTokenizer(u'(?ui)\\b[a-z]{3,}\\w*\\b')
 
+    def __call__(self, doc):
+        return [self.wnl.lemmatize(t) for t in self.rt.tokenize(doc)]
+
+# Tokenization defaults to TF/TF-IDF sparse matrices
 def build_tokenizer(**args):
-    """Return a TF or TF-IDF n-gram tokenizer."""
-    return TfidfVectorizer(**args, **tokenizer_defaults)
+    """Return a TF or TF-IDF n-gram tokenizer using scikit-learn's
+    TfidfVectorizer or CountVectorizer."""
+    # These are default arguments for scikit-learn's TfidfVectorizer/CountVectorizer
+    tokenizer_defaults = dict(
+        lowercase=True,          # convert everything to lowercase
+        decode_error='ignore',   # throw out unparseables
+        strip_accents='unicode', # preprocessing
+        # stop_words='english',
+        max_df=0.90,             # auto build ignored terms
+        min_df=0.05,             # terms only appear in small fraction of docs
+        tokenizer=LemmaTokenizer() if USE_LEMMA else None,
+        # I modified this slightly since there were lots of numbers in the tokens
+        token_pattern=u'(?ui)\\b[a-z]{3,}\\w*\\b' # ignore words starting with numbers
+    )
 
-# build some tokenizers
-tfidf_unigram_tokenizer = build_tokenizer()
-tfidf_bigram_tokenizer = build_tokenizer(ngram_range=(1, 2)) # or (2, 2) ?
-tf_unigram_tokenizer = build_tokenizer(use_idf=False)
-tf_bigram_tokenizer = build_tokenizer(use_idf=False, ngram_range=(1, 2))
+    tfidf_defaults = dict(
+        norm='l2',       # normalize term vectors
+        # use_idf=True,  # default: True - use inverse-document-freq. weighting
+        smooth_idf=True, # adds 1 to avoid division by zero errors for tf-idf
+    )
+    tfidf_defaults = {**tfidf_defaults, **tokenizer_defaults}
 
-# Tokenize the data into TF and TF-IDF tokenized, L2 normalized, and lowercase
-# NOTE:
-# - we could add in stemming and lemmatization as well? 
-# - I think it may well be worth adding in at least lemmatization, the
-#   stemming seems to make things a little harder to interpret, but may be
-#   good as well - I haven't messed around with it too much yet.
-# - This just tokenizes the text
-tf_unigrams = tf_unigram_tokenizer.fit_transform(dat['text'].values)
-tf_bigrams = tf_bigram_tokenizer.fit_transform(dat['text'].values)
-tfidf_unigrams = tfidf_unigram_tokenizer.fit_transform(dat['text'].values)
-tfidf_bigrams = tfidf_bigram_tokenizer.fit_transform(dat['text'].values)
+    if 'count' in args:
+        return CountVectorizer(args, **tokenizer_defaults)
+    return TfidfVectorizer(args, **tfidf_defaults)
+
 
 def tokenizer_info(name, grams, tokenizer):
     """Print some info about the tokenizer, include a few of the stopwords."""
+    params = tokenizer.get_params()
     print(f"{name}\n--------------------")
     print(f"Shape: {grams.shape}")
     print(f"Words: {len(tokenizer.get_feature_names())}")
-    print(f"Stopwords: {len(tokenizer.get_stop_words())}")
-    print("First 10 stopwords:")
-    print(list(tokenizer.get_stop_words())[:10])
+    if params['stop_words'] != None:
+        print(f"Stopwords: {len(tokenizer.get_stop_words())}")
+        print("First 10 stopwords:")
+        pp.pprint(list(tokenizer.get_stop_words())[:10])
+    else:
+        print(f"Stopwords auto (min_df, max_df): \
+({params['min_df']}, {params['max_df']})")
+
+# Example tokenizers
+# tfidf_uni_tokenizer = build_tokenizer()
+# tfidf_bi_tokenizer = build_tokenizer(ngram_range=(1, 2))
+# tf_uni_tokenizer = build_tokenizer(use_idf=False)
+# tf_bi_tokenizer = build_tokenizer(use_idf=False, ngram_range=(1, 2))
+
+# Tokenize the data into TF and TF-IDF tokenized, L2 normalized
+# tf_unigrams = tf_uni_tokenizer.fit_transform(dat['text'].values)
+# tf_bigrams = tf_bi_tokenizer.fit_transform(dat['text'].values)
+# tfidf_unigrams = tfidf_uni_tokenizer.fit_transform(dat['text'].values)
+# tfidf_bigrams = tfidf_bi_tokenizer.fit_transform(dat['text'].values)
     
 # info on tokens
-tokenizer_info("TF-IDF Unigrams", tfidf_unigrams, tfidf_unigram_tokenizer)
-tokenizer_info("TF-IDF Bigrams", tfidf_bigrams, tfidf_bigram_tokenizer)
-tokenizer_info("TF Unigrams", tf_unigrams, tf_unigram_tokenizer)
-tokenizer_info("TF Bigrams", tf_bigrams, tf_bigram_tokenizer)
+# tokenizer_info("TF-IDF Unigrams", tfidf_unigrams, tfidf_uni_tokenizer)
+# tokenizer_info("TF-IDF Bigrams", tfidf_bigrams, tfidf_bi_tokenizer)
+# tokenizer_info("TF Unigrams", tf_unigrams, tf_uni_tokenizer)
+# tokenizer_info("TF Bigrams", tf_bigrams, tf_bi_tokenizer)

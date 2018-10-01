@@ -33,7 +33,7 @@ create-env:
 # download nltk lemma data
 nltk-data:
 	@(if hash conda; then source activate text; fi;                    \
-	  python ${SRCDIR}/hw2_lemmatize.py)
+	  python ${SRCDIR}/hw2_prereqs.py)
 
 # convert org to markdown
 convert-%:

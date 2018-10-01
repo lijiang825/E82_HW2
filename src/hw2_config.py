@@ -1,22 +1,31 @@
 #!/usr/bin/env python
 
 import warnings
+import logging
 import seaborn as sns
+import pprint
 
 # General project constants
 # NP: - I haven't been testing models with the entire dataset and I
-#        wanted to make it configurable to use stemming/lemmatization
-#     - I also think it is worth having a random seed we use globally?
+#        wanted to make various things configurable
 
-PRELIM      = True               # running preliminary analysis
-PRELIM_FRAC = 0.2                # fraction of data to use in prelim. analysis
-USE_LEMMA   = True               # use lemmatization
-USE_STEM    = True               # stem words
-RANDOM_SEED = 999                # seed for scikit-learn and random, eg. LDA
-DATADIR     = "../data"          # raw data directory
-DATA        = "nips-papers.xlsx" # name of dataset
+DATADIR      = "../data"          # raw data directory
+DATAFILE     = "nips-papers.xlsx" # name of dataset
+SAMPLE       = True               # use only a sample of the data
+SAMPLE_FRAC  = 0.2                # fraction of data to sample
+EXTRACT_REFS = True               # Extract references from text section
+REMOVE_REFS  = True               # Remove reference section from text
+USE_LEMMA    = True               # use lemmatization
+# USE_STEM     = True               # stem words
+RANDOM_SEED  = 999                # seed for scikit-learn and random, eg. LDA
 
+# General settings
 warnings.filterwarnings("ignore")
-
-# Any plotting configs
 sns.set(style="white", color_codes=True) # minimal
+
+# logging
+logging.basicConfig(
+    level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+
+# pretty printing
+pp = pprint.PrettyPrinter(indent=4)

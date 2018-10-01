@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 # some helper routines
-
 import sys
 import os
 
