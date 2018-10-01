@@ -8,6 +8,17 @@ import pprint
 # General project constants
 # NP: - I haven't been testing models with the entire dataset and I
 #        wanted to make various things configurable
+#     - I have been storing data in ./data/nips-papers.xlsx
+
+# FIXME: where to store shared dataset?
+# NP: the data I'm using here is the cleaned up version someone posted on piazza
+# Here is the google drive link:
+# 
+# https://drive.google.com/file/d/180FBOXqxdyvzHihHsg_bAbYS-UF1WrKZ/view?usp=sharing
+#
+# It would be nice to be able to access shared dataset from our scripts, but
+# I haven't looked into the python google-drive API (there is one though). Is
+# there an alternative way for us to store our data?
 
 DATADIR      = "../data"          # raw data directory
 DATAFILE     = "nips-papers.xlsx" # name of dataset

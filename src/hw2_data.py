@@ -20,17 +20,6 @@ Note: when left with defaults, the final columns will be
   ['id', 'year', 'title', 'abstract', 'text', 'refs']
 and the shape (7241, 6).
 """
-# NP: I have been storing data in ./data/nips-papers.xlsx
-
-# FIXME: where to store shared dataset?
-# NP: the data I'm using here is the cleaned up version someone posted on piazza
-# Here is the google drive link:
-# 
-# https://drive.google.com/file/d/180FBOXqxdyvzHihHsg_bAbYS-UF1WrKZ/view?usp=sharing
-#
-# It would be nice to be able to access shared dataset from our scripts, but
-# I haven't looked into the python google-drive API (there is one though). Is
-# there an alternative way for us to store our data?
 
 import pandas as pd
 import numpy as np
@@ -42,10 +31,12 @@ from hw2_config import *        # project constants
 class NipsData:
     """Wrapper around NIPs dataset."""
     raw = None                  # raw data
-    data = None                 # resulting data after transforms
+    data = None                 # subset of data when sampling
     refs = None                 # extracted references
-    has_refs = True             # data has a 'refs' column
-    refs_removed = True         # reference section is removed from text
+    do_refs = False             # true if should extract references
+    do_remove_refs = False      # true if should remove refs from text
+    has_refs = False            # data has a 'refs' column
+    refs_removed = False        # reference section is removed from text
     root = None                 # project root
     data = None                 # data file
     datadir = None              # data directory
@@ -60,8 +51,8 @@ class NipsData:
           - remove the references section from article text
           - use a sample of the raw data
         """
-        self.has_refs = kwargs['add_refs'] if 'add_refs' in kwargs else EXTRACT_REFS
-        self.refs_removed = kwargs['remove_refs'] if 'remove_refs' in kwargs \
+        self.do_refs = kwargs['add_refs'] if 'add_refs' in kwargs else EXTRACT_REFS
+        self.do_remove_refs = kwargs['remove_refs'] if 'remove_refs' in kwargs \
             else REMOVE_REFS
         self.root = kwargs['root'] if 'root' in kwargs else root_path()
         self.datafile = kwargs['datafile'] if 'datafile' in kwargs else DATAFILE
@@ -73,22 +64,30 @@ class NipsData:
             else os.path.join(self.root, self.datadir, self.datafile)
 
 
-    def print_config(self):
-        """Print this instances configuration."""
-        print(f"Data: {self.datapath}")
-        print(f"Refs: {self.has_refs}")
-        print(f"Refs-Removed: {self.refs_removed}")
-        print(f"Sample: {self.is_sample}")
-        if (self.is_sample):
-            print(f"Sample-Fraction: {self.sample_frac}")
+    def __str__(self):
+        res = f"Data: {self.datapath}\n\
+Loaded: {self.raw is not None}\n\
+Get-Refs: {self.do_refs}\n\
+Has-Refs: {self.has_refs}\n\
+Remove-Refs: {self.do_remove_refs}\n\
+Refs-Removed: {self.refs_removed}\n\
+Sample: {self.is_sample}\n"
+        if self.is_sample:
+            res += f"Sample-Fraction: {self.sample_frac}"
+        return res
         
 
     def load_data(self, **kwargs):
         """
         Loads data. Data location is specified in class constructor or set 
-        manually.
+        manually. References are computed / removed once for the raw data
+        which can then be repeatedly sampled from.
         """
         self.raw = pd.read_excel(self.datapath) if self.raw is None else self.raw
+
+        # add references column / remove references from text
+        # this should only run once on the raw data, which can be sampled later
+        self._update_references()
         
         # Use only a fraction of data for preliminary runs
         if self.is_sample:
@@ -97,23 +96,11 @@ class NipsData:
         else:
             self.data = self.raw.copy(deep=True)
             
-        # find references if necessary
-        if self.has_refs or self.refs_removed:
-            self.find_references()
-            
-        # add references to data
-        if self.has_refs:
-            self.add_reference_column()
-
-        # remove references from text
-        if self.refs_removed:
-            self.remove_reference_section()
-
         self.data.sort_index(inplace=True)
 
 
     def resample(self, fraction, **kwargs):
-        """Resample data using FRACTION of total and update references, etc."""
+        """Resample raw data using FRACTION of total."""
         self.sample_frac = fraction
         seed = kwargs["seed"] if "seed" in kwargs else np.random.randint(0, 1000)
         kwargs = dict(seed = seed)
@@ -122,7 +109,7 @@ class NipsData:
     ## -------------------------------------------------------------------
     ### Managing References
 
-    def find_references(self):
+    def _find_references(self):
         """
         Pulls out references from papers, returns a list of references indexed by
         paper ID. Only returns references from papers where a reference section was
@@ -150,13 +137,13 @@ class NipsData:
         There seem to be ~2500 texts w/o detected reference sections in the cleaned 
         version of the data posted on piazza.
         """
-        self.refs = self.data.text.str.split(
+        self.refs = self.raw.text.str.split(
             r"\s+[Rr][Ee][Ff][Ee][Rr][Ee][Nn][Cc][Ee][Ss]\s+(?=[\[\(][0-9]{1,3}|[0-9]{1,3}[.]\s+)")
         mask = (self.refs.apply(len) > 1) # ignore texts with no detected references
-        self.refs = self.refs[self.data.text[mask].index]
+        self.refs = self.refs[self.raw.text[mask].index]
 
 
-    def split_references(self, refs):
+    def _split_references(self, refs):
         """
         Split reference text into references where possible.
 
@@ -171,24 +158,41 @@ class NipsData:
                        .apply(lambda x: [i for i in x if len(i) > 0])
 
 
-    def add_reference_column(self):
+    def _add_reference_column(self):
         """Add references to data. Pass pre-computed 'refs' to avoid recomputation."""
-        if 'refs' in self.data:
-            print("Already have a references column: 'refs'")
-            return 
         # Only use the last section
-        self.data["refs"] = self.split_references(self.refs.apply(lambda x: (x[-1:])[0]))
+        self.raw["refs"] = self._split_references(self.refs.apply(lambda x: (x[-1:])[0]))
+        self.has_refs = True
 
 
-    def remove_reference_section(self):
+    def _remove_reference_section(self):
         """
         Remove the reference section from text. The text is split into possible 
-        reference sections by `find_references`, and the last section, presumably the
+        reference sections by `_find_references`, and the last section, presumably the
         actual reference section is removed.
 
         The split sections, minus the last one, are joined back together with 
         ' references '.
         """
         # a couple have random refs, but the last section should be right
-        self.data.text[self.refs.index] = \
+        self.raw.text[self.refs.index] = \
             self.refs.apply(lambda x: ' references '.join(x[:-1]))
+        self.refs_removed = True
+
+
+    def _update_references(self):
+        """
+        Do the configured operations on the data related to references.
+        Calls _add_reference_column and _remove_reference_section when 
+        applicable.
+        """
+        if (self.do_remove_refs and not self.refs_removed) or\
+           (self.do_refs and not self.has_refs):
+            # find references if necessary and add refs column
+            if not self.has_refs:
+                self._find_references()
+                self._add_reference_column()
+
+            # remove references from text
+            if self.do_remove_refs and not self.refs_removed:
+                self._remove_reference_section()
