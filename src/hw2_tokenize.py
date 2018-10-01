@@ -34,8 +34,6 @@ from nltk.tokenize import RegexpTokenizer
 from hw2_config import *        # project constants
 from hw2_utils import *         # helper functions
 
-nltk.data.path = root_path()
-
 def get_nltk_prereqs():
     """Download NLTK prereqs in root directory."""
     nltk.download(['wordnet', 'punkt'], download_dir=root_path())

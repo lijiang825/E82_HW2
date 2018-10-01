@@ -4,6 +4,8 @@ import warnings
 import logging
 import seaborn as sns
 import pprint
+import nltk
+from hw2_utils import *
 
 # General project constants
 # NP: - I haven't been testing models with the entire dataset and I
@@ -33,6 +35,9 @@ RANDOM_SEED  = 999                # seed for scikit-learn and random, eg. LDA
 # General settings
 warnings.filterwarnings("ignore")
 sns.set(style="white", color_codes=True) # minimal
+
+# download nltk libraries in project root (they are in .gitignore)
+nltk.data.path = [root_path()]
 
 # logging
 logging.basicConfig(
