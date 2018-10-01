@@ -1,0 +1,5 @@
+corpora
+tokenizers
+__pycache__
+*.pyc
+*~

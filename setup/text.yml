@@ -1,0 +1,21 @@
+name: text
+dependencies:
+  - python=3.6
+  - numpy
+  - matplotlib
+  - seaborn
+  - pandas
+  - scikit-learn
+  - xlrd
+  - jupyter
+  - ipython
+  - cython
+  - bz2file
+  - nltk
+  - gensim
+  - pyemd
+  - pip:
+    - PyHamcrest
+    - mlxtend
+    - wordcloud
+    - textblob
