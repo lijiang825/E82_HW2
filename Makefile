@@ -1,18 +1,18 @@
-SHELL        = /bin/bash
-conda        ?= conda
-python       ?= python
+SHELL       = /bin/bash
+conda       ?= conda
+python      ?= python
 
-SETUP        = setup
-DATADIR      = data
-ETCDIR       = etc
-SRCDIR       = src
-NLTK_DATADIR = corpora
-GITDIR       = $(realpath E82_HW2)
+SETUP       = setup
+DATADIR     = data
+ETCDIR      = etc
+SRCDIR      = src
+NLTK_DATA   = corpora tokenizers
+GITDIR      = $(realpath E82_HW2)
 
 # just for converting from .org to markdown or whatever format
-emacs        ?= emacs
-EMACS_FLAGS  ?= -batch -Q
-EMACS_MD     = ${EMACS_FLAGS} -f org-md-export-to-markdown
+emacs       ?= emacs
+EMACS_FLAGS ?= -batch -Q
+EMACS_MD    = ${EMACS_FLAGS} -f org-md-export-to-markdown
 
 all:
 
@@ -65,4 +65,4 @@ clean:
 	$(RM) -r *~ ${SRCDIR}/*.pyc *.pyc
 
 clean-all: clean
-	$(RM) -rf ${SRCDIR}/__pycache__ __pycache__ ${NLTK_DATADIR}
+	$(RM) -rf ${SRCDIR}/__pycache__ __pycache__

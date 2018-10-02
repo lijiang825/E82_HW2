@@ -16,7 +16,7 @@ top_n_words = 10                # number of words to print / topic
 
 # Fit LDA model with bigrams on abstracts
 lda_abs, bigrams_abs, bi_tokenizer_abs =\
-    run_lda(dat.text, msg="LDA w/ bigrams on abstracts", ngram_range=(1, 2),
+    run_lda(dat.abstract, msg="LDA w/ bigrams on abstracts", ngram_range=(1, 2),
             n_components=20) 
 
 print_top_words(lda_abs, bi_tokenizer_abs.get_feature_names(), top_n_words)
