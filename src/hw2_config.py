@@ -5,6 +5,8 @@ import logging
 import seaborn as sns
 import pprint
 import nltk
+import os
+
 from hw2_utils import *
 
 # General project constants
@@ -24,6 +26,8 @@ from hw2_utils import *
 
 DATADIR      = "../data"          # raw data directory
 DATAFILE     = "nips-papers.xlsx" # name of dataset
+PICKLEDIR    = "../pickle"        # directory to store saved models
+NLTKDIR      = "../nltk-data"     # NLTK downloads
 SAMPLE       = True               # use only a sample of the data
 SAMPLE_FRAC  = 0.2                # fraction of data to sample
 EXTRACT_REFS = True               # Extract references from text section
@@ -37,7 +41,7 @@ warnings.filterwarnings("ignore")
 sns.set(style="white", color_codes=True) # minimal
 
 # download nltk libraries in project root (they are in .gitignore)
-nltk.data.path = [root_path()]
+nltk.data.path = [os.path.join(root_path(), NLTKDIR)]
 
 # logging
 logging.basicConfig(

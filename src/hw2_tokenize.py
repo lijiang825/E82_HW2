@@ -39,7 +39,8 @@ from hw2_utils import *         # helper functions
 
 def get_nltk_prereqs():
     """Download NLTK prereqs in root directory."""
-    nltk.download(['wordnet', 'punkt'], download_dir=root_path())
+    nltk.download(['wordnet', 'punkt'],
+                  download_dir=os.path.join(root_path(), NLTKDIR))
 
 ## -------------------------------------------------------------------
 ### Word preprocessing:

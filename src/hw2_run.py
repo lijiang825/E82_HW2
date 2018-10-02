@@ -3,6 +3,7 @@
 """
 Main driver program to fit some LDA models.
 """
+import pickle
 
 from hw2_config import *
 from hw2_tokenize import build_tokenizer, tokenizer_info
