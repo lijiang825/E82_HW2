@@ -26,7 +26,7 @@ from hw2_utils import *
 
 DATADIR      = "../data"          # raw data directory
 DATAFILE     = "nips-papers.xlsx" # name of dataset
-PICKLEDIR    = "../pickle"        # directory to store saved models
+PKLFILE      = "nips-papers.pkl"  # name of pickled data -- already cleaned
 NLTKDIR      = "../nltk-data"     # NLTK downloads
 SAMPLE       = True               # use only a sample of the data
 SAMPLE_FRAC  = 0.2                # fraction of data to sample

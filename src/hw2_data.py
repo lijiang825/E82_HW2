@@ -5,7 +5,10 @@ This module contains a wrapper class to store the NIPs data.
 Configuration can be handled in hw2_config by setting global constants,
 or in the class constructor.
 
-By default, when data is loaded it: 
+If a clean pickled version of the data is available, it is loaded and 
+none of the cleaning is done.
+
+Otherwise, by default, when raw data is loaded it:
   - creates lists of references from the text of the articles (from the 
     References section), adding a new column "refs" to the data.
   - removes the Reference section from the text
@@ -14,7 +17,7 @@ By default, when data is loaded it:
 Useful methods:
   - load_data: loads data using the current settings
   - resample: resamples the raw dataset a given sample fraction
-  - print_config: print out the instance configuration
+  - to_pickle: save the data to a pickle file
 
 Note: when left with defaults, the final columns will be 
   ['id', 'year', 'title', 'abstract', 'text', 'refs']
@@ -42,15 +45,20 @@ class NipsData:
     datadir = None              # data directory
     is_sample = True            # use sample of total dataset
     sample_frac = None          # fraction of data to use in sample
+    pklfile = None              # pickled version of cleaned data
+
 
     def __init__(self, **kw):
         """
-        Manages NIPs data.
+        Manages NIPs data. If there is a pickled version available it is loaded
+        without doing any cleaning.
+
         Default options (can be passed in constructor or changed in global config):
           - add column with list of references extracted from text
           - remove the references section from article text
           - use a sample of the raw data
         """
+        self.pklfile = kw.pop('pklfile', PKLFILE)
         self.do_refs = kw.pop('add_refs', EXTRACT_REFS)
         self.do_remove_refs = kw.pop('remove_refs', REMOVE_REFS)
         self.root = kw.pop('root', root_path())
@@ -58,8 +66,20 @@ class NipsData:
         self.datadir = kw.pop('datadir', DATADIR)
         self.is_sample = kw.pop('sample', SAMPLE)
         self.sample_frac = kw.pop('sample_frac', SAMPLE_FRAC)
-        self.datapath = \
-            kw.pop('datapath', os.path.join(self.root, self.datadir, self.datafile))
+        self.datapath = kw.pop('datapath', self._data_path())
+
+
+    def _data_path(self):
+        """Return the datapath, pickled if possible."""
+        ddir = os.path.join(self.root, self.datadir)
+        pkl = os.path.join(ddir, self.pklfile) if self.pklfile is not None else None
+        if pkl is not None and os.path.exists(pkl):
+            self.has_refs = True
+            self.refs_removed = True
+            return pkl
+        self.pklfile = None
+        return os.path.join(ddir, self.datafile) if self.datafile is not None \
+            else None
 
 
     def __str__(self):
@@ -74,20 +94,37 @@ Sample: {self.is_sample}\n"
             res += f"Sample-Fraction: {self.sample_frac}"
         return res
 
+    def __repr__(self):
+        return self.__str__()
+
+
+    def to_pickle(self, **kw):
+        """Save dataset as a pickle. Optionally specify output as 'file=...'."""
+        default = os.path.join(self.datadir, self.pklfile if self.pklfile is not None
+                               else 'nips-papers.pkl')
+        self.raw.to_pickle(kw.pop('file', default))
+
 
     def load_data(self, **kwargs):
         """
-        Loads data. Data location is specified in class constructor or set 
-        manually. References are computed / removed once for the raw data
-        which can then be repeatedly sampled from.
+        Loads data, pickled file if available. The data location can be
+        specified in class constructor or set manually. 
+
+        If raw data is read, references are computed/removed once for the
+        raw data which can then be repeatedly sampled from.
         
         Returns processed data.
         """
-        self.raw = pd.read_excel(self.datapath) if self.raw is None else self.raw
+        if self.raw is None:
+            if self.pklfile:    # pickled file already has refs removed
+                self.raw = pd.read_pickle(self.datapath)
 
-        # add references column / remove references from text
-        # this should only run once on the raw data, which can be sampled later
-        self._update_references()
+            else:
+                self.raw = pd.read_excel(self.datapath)
+
+                # add references column / remove references from text
+                # only run once on the raw data, which can be sampled later
+                self._update_references()
         
         # Use only a fraction of data for preliminary runs
         if self.is_sample:
@@ -98,6 +135,7 @@ Sample: {self.is_sample}\n"
             
         self.data.sort_index(inplace=True)
         return self.data
+
 
     def resample(self, fraction, **kwargs):
         """Resample raw data using FRACTION of total. Returns new sample."""

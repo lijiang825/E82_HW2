@@ -5,8 +5,9 @@ LDA models. Work in progress. But the topics output seem pretty decent.
 TODO: account for more than just unigram topics???
 """
 
-# LDA / NMF models
-from sklearn.decomposition import NMF, LatentDirichletAllocation
+# LDA
+from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.model_selection import GridSearchCV
 
 from hw2_config import *
 from hw2_tokenize import build_tokenizer

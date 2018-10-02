@@ -1,6 +1,7 @@
 corpora
 tokenizers
 nltk-data
+data
 __pycache__
 *.pyc
 *~
