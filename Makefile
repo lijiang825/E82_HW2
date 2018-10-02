@@ -16,6 +16,10 @@ EMACS_MD     = ${EMACS_FLAGS} -f org-md-export-to-markdown
 
 all:
 
+run-lda: nltk-data
+	@(if hash conda; then source activate text; fi;                    \
+	  python ${SRCDIR}/hw2_run.py)
+
 # TODO: where to store data?
 # get-data:
 # 	@(mkdir -p ${DATADIR} && cd ${DATADIR} &&                          \

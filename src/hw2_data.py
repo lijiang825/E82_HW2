@@ -43,7 +43,7 @@ class NipsData:
     is_sample = True            # use sample of total dataset
     sample_frac = None          # fraction of data to use in sample
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kw):
         """
         Manages NIPs data.
         Default options (can be passed in constructor or changed in global config):
@@ -51,17 +51,15 @@ class NipsData:
           - remove the references section from article text
           - use a sample of the raw data
         """
-        self.do_refs = kwargs['add_refs'] if 'add_refs' in kwargs else EXTRACT_REFS
-        self.do_remove_refs = kwargs['remove_refs'] if 'remove_refs' in kwargs \
-            else REMOVE_REFS
-        self.root = kwargs['root'] if 'root' in kwargs else root_path()
-        self.datafile = kwargs['datafile'] if 'datafile' in kwargs else DATAFILE
-        self.datadir = kwargs['datadir'] if 'datadir' in kwargs else DATADIR
-        self.is_sample = kwargs['sample'] if 'sample' in kwargs else SAMPLE
-        self.sample_frac = kwargs['sample_frac'] if 'sample_frac' in kwargs else \
-            SAMPLE_FRAC
-        self.datapath = kwargs['datapath'] if 'datapath' in kwargs \
-            else os.path.join(self.root, self.datadir, self.datafile)
+        self.do_refs = kw.pop('add_refs', EXTRACT_REFS)
+        self.do_remove_refs = kw.pop('remove_refs', REMOVE_REFS)
+        self.root = kw.pop('root', root_path())
+        self.datafile = kw.pop('datafile', DATAFILE)
+        self.datadir = kw.pop('datadir', DATADIR)
+        self.is_sample = kw.pop('sample', SAMPLE)
+        self.sample_frac = kw.pop('sample_frac', SAMPLE_FRAC)
+        self.datapath = \
+            kw.pop('datapath', os.path.join(self.root, self.datadir, self.datafile))
 
 
     def __str__(self):
@@ -75,13 +73,15 @@ Sample: {self.is_sample}\n"
         if self.is_sample:
             res += f"Sample-Fraction: {self.sample_frac}"
         return res
-        
+
 
     def load_data(self, **kwargs):
         """
         Loads data. Data location is specified in class constructor or set 
         manually. References are computed / removed once for the raw data
         which can then be repeatedly sampled from.
+        
+        Returns processed data.
         """
         self.raw = pd.read_excel(self.datapath) if self.raw is None else self.raw
 
@@ -91,21 +91,22 @@ Sample: {self.is_sample}\n"
         
         # Use only a fraction of data for preliminary runs
         if self.is_sample:
-            seed = kwargs['seed'] if 'seed' in kwargs else RANDOM_SEED
+            seed = kwargs.pop('seed', RANDOM_SEED)
             self.data = self.raw.sample(frac=self.sample_frac, random_state=seed)
         else:
             self.data = self.raw.copy(deep=True)
             
         self.data.sort_index(inplace=True)
-
+        return self.data
 
     def resample(self, fraction, **kwargs):
-        """Resample raw data using FRACTION of total."""
+        """Resample raw data using FRACTION of total. Returns new sample."""
         self.sample_frac = fraction
-        seed = kwargs["seed"] if "seed" in kwargs else np.random.randint(0, 1000)
+        seed = kwargs.pop('seed', np.random.randint(0, 10000))
         kwargs = dict(seed = seed)
         self.load_data(**kwargs)
-        
+        return self.data
+    
     ## -------------------------------------------------------------------
     ### Managing References
 

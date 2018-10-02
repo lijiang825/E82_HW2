@@ -10,7 +10,7 @@ Tokenization:
   - stopwords are computed on the fly using min_df and max_df params
 
 Normalization:
-  - generates either TF or TF-IDF tokenizers
+  - generates CountVectorizers, TF or TF-IDF tokenizers
   - TF are normalized using 'l2' norm
   - TF-IDF are further normalized by frequency of word / doc to word globally
 
@@ -19,10 +19,13 @@ See hw2_config for configuration.
 Note: to use the nltk lemmatizer, there are a couple downloads required. The
 wrapper function 'get_nltk_prereqs' will install them in the project root 
 directory.
-"""
 
-import pandas as pd
-import numpy as np
+Example to create a bigram CountVectorizer:
+
+    tokenizer = build_tokenizer(count=True, ngram_range=(1, 2))
+    tokenizer.fit_transform(data)
+    tokenizer_info("Unigram tokenizer", tokens, tokenizer)
+"""
 
 ## Text pipeline & NLP packages
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -51,15 +54,23 @@ def get_nltk_prereqs():
 class LemmaTokenizer(object):
     def __init__(self):
         self.wnl = WordNetLemmatizer()
-        self.rt = RegexpTokenizer(u'(?ui)\\b[a-z]{3,}\\w*\\b')
+        self.rt = RegexpTokenizer('(?ui)\\b[a-z]{3,}\\w*\\b')
 
     def __call__(self, doc):
         return [self.wnl.lemmatize(t) for t in self.rt.tokenize(doc)]
 
 # Tokenization defaults to TF/TF-IDF sparse matrices
 def build_tokenizer(**args):
-    """Return a TF or TF-IDF n-gram tokenizer using scikit-learn's
-    TfidfVectorizer or CountVectorizer."""
+    """
+    Return a TF or TF-IDF n-gram tokenizer using scikit-learn's
+    TfidfVectorizer or CountVectorizer.
+    
+    Arguments: 
+      - count: if count=True returns a CountVectorizer, otherwise TfidfVectorizer
+      - all other arguments are passed on to the returned vectorizer.
+    """
+    cv = args.pop('count', False) # return CountVectorizer
+    
     # These are default arguments for scikit-learn's TfidfVectorizer/CountVectorizer
     tokenizer_defaults = dict(
         lowercase=True,          # convert everything to lowercase
@@ -75,14 +86,15 @@ def build_tokenizer(**args):
 
     tfidf_defaults = dict(
         norm='l2',       # normalize term vectors
-        # use_idf=True,  # default: True - use inverse-document-freq. weighting
+        use_idf=True,    # default: True - use inverse-document-freq. weighting
         smooth_idf=True, # adds 1 to avoid division by zero errors for tf-idf
     )
     tfidf_defaults = {**tfidf_defaults, **tokenizer_defaults}
 
-    if 'count' in args:
-        return CountVectorizer(args, **tokenizer_defaults)
-    return TfidfVectorizer(args, **tfidf_defaults)
+    # passed arguments override the defaults
+    if cv:
+        return CountVectorizer(**{**tokenizer_defaults, **args})
+    return TfidfVectorizer(**{**tfidf_defaults, **args})
 
 
 def tokenizer_info(name, grams, tokenizer):
@@ -98,21 +110,3 @@ def tokenizer_info(name, grams, tokenizer):
     else:
         print(f"Stopwords auto (min_df, max_df): \
 ({params['min_df']}, {params['max_df']})")
-
-# Example tokenizers
-# tfidf_uni_tokenizer = build_tokenizer()
-# tfidf_bi_tokenizer = build_tokenizer(ngram_range=(1, 2))
-# tf_uni_tokenizer = build_tokenizer(use_idf=False)
-# tf_bi_tokenizer = build_tokenizer(use_idf=False, ngram_range=(1, 2))
-
-# Tokenize the data into TF and TF-IDF tokenized, L2 normalized
-# tf_unigrams = tf_uni_tokenizer.fit_transform(dat['text'].values)
-# tf_bigrams = tf_bi_tokenizer.fit_transform(dat['text'].values)
-# tfidf_unigrams = tfidf_uni_tokenizer.fit_transform(dat['text'].values)
-# tfidf_bigrams = tfidf_bi_tokenizer.fit_transform(dat['text'].values)
-    
-# info on tokens
-# tokenizer_info("TF-IDF Unigrams", tfidf_unigrams, tfidf_uni_tokenizer)
-# tokenizer_info("TF-IDF Bigrams", tfidf_bigrams, tfidf_bi_tokenizer)
-# tokenizer_info("TF Unigrams", tf_unigrams, tf_uni_tokenizer)
-# tokenizer_info("TF Bigrams", tf_bigrams, tf_bi_tokenizer)
