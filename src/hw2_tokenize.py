@@ -6,7 +6,7 @@ Tokenization:
   - removes punctuation
   - cleans up unicode
   - breaks strings into words of at least 3 letters using RegexpTokenizer
-  - lemmatizes words using WordNetLemmatizer if USE_LEMMA is True
+  - lemmatizes words (nouns) using WordNetLemmatizer if USE_LEMMA is True
   - stopwords are computed on the fly using min_df and max_df params
 
 Normalization:
@@ -71,13 +71,13 @@ def build_tokenizer(**args):
       - all other arguments are passed on to the returned vectorizer.
     """
     cv = args.pop('count', False) # return CountVectorizer
-    
+
     # These are default arguments for scikit-learn's TfidfVectorizer/CountVectorizer
     tokenizer_defaults = dict(
         lowercase=True,          # convert everything to lowercase
         decode_error='ignore',   # throw out unparseables
         strip_accents='unicode', # preprocessing
-        # stop_words='english',
+        stop_words='english',
         max_df=0.90,             # auto build ignored terms
         min_df=0.05,             # terms only appear in small fraction of docs
         tokenizer=LemmaTokenizer() if USE_LEMMA else None,

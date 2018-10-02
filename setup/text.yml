@@ -6,6 +6,7 @@ dependencies:
   - seaborn
   - pandas
   - scikit-learn
+  - regex
   - xlrd
   - jupyter
   - ipython
