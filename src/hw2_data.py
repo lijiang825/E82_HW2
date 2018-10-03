@@ -105,7 +105,7 @@ Sample: {self.is_sample}\n"
         self.raw.to_pickle(kw.pop('file', default))
 
 
-    def load_data(self, **kwargs):
+    def load_data(self, **kw):
         """
         Loads data, pickled file if available. The data location can be
         specified in class constructor or set manually. 
@@ -116,7 +116,7 @@ Sample: {self.is_sample}\n"
         Returns processed data.
         """
         if self.raw is None:
-            if self.pklfile:    # pickled file already has refs removed
+            if self.pklfile is not None: # pickled file already has refs removed
                 self.raw = pd.read_pickle(self.datapath)
 
             else:
@@ -128,8 +128,9 @@ Sample: {self.is_sample}\n"
         
         # Use only a fraction of data for preliminary runs
         if self.is_sample:
-            seed = kwargs.pop('seed', RANDOM_SEED)
-            self.data = self.raw.sample(frac=self.sample_frac, random_state=seed)
+            seed = kw.pop('seed', RANDOM_SEED)
+            self.data = self.raw.sample(
+                frac=kw.pop('sample_frac', self.sample_frac), random_state=seed)
         else:
             self.data = self.raw.copy(deep=True)
             

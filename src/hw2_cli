@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+
+"""
+CLI interface to run models and download stuff.
+Models/results are pickled when they finish so they can be loaded quickly later.
+Downloads prereqs for NLTK lemmatization/tokenization into NLTKDIR.
+"""
+
+import nltk
+import sys
+from optparse import OptionParser
+
+from hw2_data import NipsData
+from hw2_tokenize import compute_all_collocations
+from hw2_lda import run_lda_all_sections
+from hw2_config import *
+from hw2_utils import *
+
+
+def get_nltk_prereqs():
+    """Download NLTK prereqs in root NLTKDIR."""
+    nltk.download(['wordnet', 'punkt', 'stopwords'],
+                  download_dir=os.path.join(root_path(), NLTKDIR))
+
+
+def main():
+    op = OptionParser(usage="usage: %prog [options]")
+    op.add_option("--nltk", help="Install NLTK corpi", action="store_true",
+                  dest="get_nltk")
+    op.add_option("--collocs", help="Compute n-gram collocations",
+                  action="store_true", dest="colloc")
+    op.add_option("--lda", help="Run all LDA models",
+                  action="store_true", dest="lda")
+    (opts, args) = op.parse_args()
+
+    nips = NipsData()
+    
+    if opts.get_nltk:
+        get_nltk_prereqs()
+
+    if opts.colloc:
+        compute_all_collocations(nips)
+
+    if opts.lda:
+        run_lda_all_sections(nips)
+
+        
+if __name__ == '__main__':
+    main()

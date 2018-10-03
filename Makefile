@@ -8,6 +8,7 @@ ETCDIR      = etc
 SRCDIR      = src
 NLTK_DATA   = corpora tokenizers
 GITDIR      = $(realpath E82_HW2)
+DRIVER      = ${SRCDIR}/hw2_cli
 
 # just for converting from .org to markdown or whatever format
 emacs       ?= emacs
@@ -35,9 +36,23 @@ create-env:
 	fi
 
 # download nltk lemma data
+.PHONY: nltk-data pickle
 nltk-data:
 	@(if hash conda; then source activate text; fi;                    \
-	  python ${SRCDIR}/hw2_prereqs.py)
+	  python ${DRIVER} --nltk)
+
+# compute collocations if not pickled
+pickle:
+	@mkdir -p pickle
+
+run-colloc: pickle
+	@(if hash conda; then source activate text; fi;                    \
+	  python ${DRIVER} --nltk --collocs)
+
+# run and store LDA models
+run-lda: pickle
+	@(if hash conda; then source activate text; fi;                    \
+	  python ${DRIVER} --nltk --collocs --lda)
 
 # convert org to markdown
 convert-%:
