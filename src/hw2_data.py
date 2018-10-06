@@ -18,6 +18,7 @@ Useful methods:
   - load_data: loads data using the current settings
   - resample: resamples the raw dataset a given sample fraction
   - to_pickle: save the data to a pickle file
+  - combined_sections: return series with sections combined
 
 Note: when left with defaults, the final columns will be 
   ['id', 'year', 'title', 'abstract', 'text', 'refs']
@@ -28,7 +29,6 @@ import pandas as pd
 import numpy as np
 import os
 
-from hw2_utils import *         # helper functions: root_path
 from hw2_config import *        # project constants
 
 class NipsData:
@@ -67,7 +67,7 @@ class NipsData:
         self.is_sample = kw.pop('sample', SAMPLE)
         self.sample_frac = kw.pop('sample_frac', SAMPLE_FRAC)
         self.datapath = kw.pop('datapath', self._data_path())
-
+        
 
     def _data_path(self):
         """Return the datapath, pickled if possible."""
@@ -129,9 +129,14 @@ Sample: {self.is_sample}\n"
         # Use only a fraction of data for preliminary runs
         if self.is_sample:
             seed = kw.pop('seed', RANDOM_SEED)
-            self.data = self.raw.sample(
-                frac=kw.pop('sample_frac', self.sample_frac), random_state=seed)
-        else:
+            self.sample_frac = kw.pop('sample_frac', self.sample_frac)
+            if self.sample_frac == 1:
+                self.is_sample = False
+            else:
+                self.data =\
+                    self.raw.sample(frac=self.sample_frac, random_state=seed)
+
+        if not self.is_sample:
             self.data = self.raw.copy(deep=True)
             
         self.data.sort_index(inplace=True)
@@ -141,11 +146,23 @@ Sample: {self.is_sample}\n"
     def resample(self, fraction, **kwargs):
         """Resample raw data using FRACTION of total. Returns new sample."""
         self.sample_frac = fraction
+        if self.sample_frac < 1:
+            self.is_sample = True
         seed = kwargs.pop('seed', np.random.randint(0, 10000))
         kwargs = dict(seed = seed)
         self.load_data(**kwargs)
         return self.data
     
+
+    def combined_sections(self, sections, data=None):
+        """Return combined sections from data, eg. 'title' + 'abstract'."""
+        if data is None:
+            data = self.raw
+        if not isinstance(sections, list):
+            return data[sections]
+        return data[sections].apply(lambda x: '\n\n'.join(x), axis=1)
+
+
     ## -------------------------------------------------------------------
     ### Managing References
 

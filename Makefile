@@ -8,7 +8,10 @@ ETCDIR      = etc
 SRCDIR      = src
 NLTK_DATA   = corpora tokenizers
 GITDIR      = $(realpath E82_HW2)
-DRIVER      = ${SRCDIR}/hw2_cli
+
+DATACOLS    = title,abstract
+SAMPLE      = 0.8
+DRIVER      = ${SRCDIR}/hw2_cli --cols ${DATACOLS} --sample ${SAMPLE}
 
 # just for converting from .org to markdown or whatever format
 emacs       ?= emacs
@@ -17,18 +20,7 @@ EMACS_MD    = ${EMACS_FLAGS} -f org-md-export-to-markdown
 
 all:
 
-run-lda: nltk-data
-	@(if hash conda; then source activate text; fi;                    \
-	  python ${SRCDIR}/hw2_run.py)
-
-# TODO: where to store data?
-# get-data:
-# 	@(mkdir -p ${DATADIR} && cd ${DATADIR} &&                          \
-# 	wget https://drive.google.com/open?id=180FBOXqxdyvzHihHsg_bAbYS-UF1WrKZ)
-
-# NP: installs packages I've been using with conda creating "text" env
-# I don't know if you use conda, but I'll include the environment in case
-# if you don't have conda on your path it won't do anything
+# setup python env called 'text' with conda if installed
 create-env:
 	@if hash conda 2>/dev/null && ! conda env list | grep "envs/text"; \
 	then                                                               \
@@ -45,23 +37,24 @@ nltk-data:
 pickle:
 	@mkdir -p pickle
 
-run-colloc: pickle
+# run LDA w/ scikit or gensim
+lda-%: pickle
 	@(if hash conda; then source activate text; fi;                    \
-	  python ${DRIVER} --nltk --collocs)
+	  python ${DRIVER} --lda $(subst lda-,,$@))
 
-# run and store LDA models
-run-lda: pickle
+optim-%: pickle
 	@(if hash conda; then source activate text; fi;                    \
-	  python ${DRIVER} --nltk --collocs --lda)
+	  python ${DRIVER} --optim $(subst optim-,,$@))
+
+# make cli-<target>
+cli-%: pickle
+	@(if hash conda; then source activate text; fi;                    \
+	  python ${DRIVER} $(subst cli-,,--$@))
 
 # convert org to markdown
 convert-%:
 	@echo "converting $(subst convert-,,$@)"
 	${emacs} $(subst convert-,,$@).org ${EMACS_MD}
-# @for i in ${ETCDIR}/*.org; do                                            \
-# 	echo "converting $$i -> md";                                       \
-# 	${emacs} $$i ${EMACS_MD};                                          \
-# done;
 
 # link my code to git repo -- ignore this
 links:

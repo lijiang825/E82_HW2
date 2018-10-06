@@ -6,44 +6,81 @@ Models/results are pickled when they finish so they can be loaded quickly later.
 Downloads prereqs for NLTK lemmatization/tokenization into NLTKDIR.
 """
 
-import nltk
-import sys
 from optparse import OptionParser
 
 from hw2_data import NipsData
-from hw2_tokenize import compute_all_collocations
-from hw2_lda import run_lda_all_sections
+from hw2_collocation import compute_all_collocations
+from hw2_lda import run_lda_all_models, lda_optimize_model, lda_optim_cli
+from hw2_lda_gensim import run_lda_gensim_all_models, run_ldaseq
 from hw2_config import *
-from hw2_utils import *
-
-
-def get_nltk_prereqs():
-    """Download NLTK prereqs in root NLTKDIR."""
-    nltk.download(['wordnet', 'punkt', 'stopwords'],
-                  download_dir=os.path.join(root_path(), NLTKDIR))
 
 
 def main():
     op = OptionParser(usage="usage: %prog [options]")
     op.add_option("--nltk", help="Install NLTK corpi", action="store_true",
                   dest="get_nltk")
-    op.add_option("--collocs", help="Compute n-gram collocations",
+    op.add_option("--colloc", help="Compute n-gram collocations",
                   action="store_true", dest="colloc")
-    op.add_option("--lda", help="Run all LDA models",
-                  action="store_true", dest="lda")
+    op.add_option('--wvec', help="TODO: run word2vec", action="store_true")
+    op.add_option("--lda", help="Run all LDA models w/ scikit or gensim",
+                  choices=['sci', 'gen', 'seq'], action="store", dest="lda")
+    op.add_option('--optim', help="run optimizization for LDA/NMF",
+                  action="store", choices=['lda-sci', 'lda-gen', 'nmf'], dest="optim")
+    op.add_option("--cols", help="comma-delimited sections of data to use",
+                  type=str, dest='cols')
+    op.add_option("--sample", help='sample size to use', action='store', type=float,
+                  dest='sample')
     (opts, args) = op.parse_args()
-
-    nips = NipsData()
     
+    nips = NipsData()
+    nips.load_data()
+    cols = opts.cols.split(',') if opts.cols else None
+    colnames = get_save_name(cols)
+    dat = nips.load_data(sample_frac=opts.sample if opts.sample else 0.8)
+    dat = nips.combined_sections(cols)
+    
+    if cols:
+        print(f"Using {[', '.join(cols)]}")
+
     if opts.get_nltk:
         get_nltk_prereqs()
 
     if opts.colloc:
         compute_all_collocations(nips)
 
-    if opts.lda:
-        run_lda_all_sections(nips)
+    if not opts.lda is None:
+        nips.load_data()
+        if opts.lda == 'sci':
+            run_lda_all_models(nips, sections=[cols], joins=True)
+        elif opts.lda == 'gen':
+            run_lda_gensim_all_models(nips, num_topics=30)
+        else:
+            run_ldaseq(nips.raw, sections=cols)
 
+    if opts.optim:
+        if opts.optim == 'lda-sci':
+            optims = pickle_load('lda_sci_optim.pkl')
+            print("Optimizing LDA with scikit...")
+            pgrid = {'n_components': [10, 15, 20, 25, 50]}
+                     # 'max_iter': [10, 50],
+                     # 'max_doc_update_iter': [100, 400]}
+            mod = lda_optim_cli(dat, pgrid=pgrid, joined=True)
+            optims['lda_sci_joined_' + colnames] = mod
+            pickle_save(optims, 'lda_sci_optim.pkl')
+            
+        elif opts.optim == 'lda-gen':
+            print("run hw2_lda_gensim_optim")
+            pgrid = {'num_topics': (10, 12, 15, 20, 30)}
+            print(f"Optimizing LDA topics with gensim: {pgrid}")
+            mod = lda_gensim_optimize(dat, cols, pgrid=pgrid)
+            optims['lda_cv_' + colnames] = mod
+
+        else:
+            print("TODO: optimize NMF?")
         
+    if opts.wvec:
+        print("TODO: word2vec")
+        
+
 if __name__ == '__main__':
     main()
